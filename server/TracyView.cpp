@@ -24,6 +24,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <time.h>
+#include <iostream>
+#include <fstream>
 
 #ifdef __AVX2__
 #  ifdef _MSC_VER
@@ -9931,6 +9933,26 @@ void View::DrawFindZone()
 
             if( tmin != std::numeric_limits<int64_t>::max() && !m_findZone.sorted.empty() )
             {
+
+                {
+                    TextDisabledUnformatted( "Save values to /tmp/hist.csv:" );
+                    ImGui::SameLine();
+                    if( ImGui::Button( "Hacky Export Button" ) ) {
+                        std::ofstream csv;
+                        csv.open ("/tmp/hist.csv");
+                        csv << "nanoseconds\n";
+
+                        const auto& sorted = m_findZone.sorted;
+                        auto sortedBegin = sorted.begin();
+                        auto sortedEnd = sorted.end();
+                        while( sortedBegin != sortedEnd && *sortedBegin == 0 ) ++sortedBegin;
+                        while( sortedBegin != sortedEnd)
+                                csv << *sortedBegin++ << "\n";
+                        csv.close();
+                    }
+                }
+
+
                 TextDisabledUnformatted( "Minimum values in bin:" );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( ImGui::CalcTextSize( "123456890123456" ).x );
