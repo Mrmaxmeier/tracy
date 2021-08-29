@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 
 #include "json.hpp"
 
@@ -46,9 +47,12 @@ int main( int argc, char** argv )
         fprintf( stderr, "Cannot open input file!\n" );
         exit( 1 );
     }
-    json j;
-    is >> j;
-    is.close();
+    // json j;
+    // is >> j;
+    // is.close();
+    std::string header;
+    std::getline(is, header);
+    assert(header == "{\"traceEvents\":[");
 
     printf( "\33[2KParsing...\r" );
     fflush( stdout );
@@ -57,6 +61,7 @@ int main( int argc, char** argv )
     std::vector<tracy::Worker::ImportEventMessages> messages;
     std::vector<tracy::Worker::ImportEventPlots> plots;
 
+    /*
     if( j.is_object() && j.contains( "traceEvents" ) )
     {
         j = j["traceEvents"];
@@ -67,9 +72,17 @@ int main( int argc, char** argv )
         fprintf( stderr, "Input must be either an array of events or an object containing an array of events under \"traceEvents\" key.\n" );
         exit( 1 );
     }
+    */
 
-    for( auto& v : j )
+
+    std::string line;
+    while (std::getline(is, line))
     {
+        if (line.length() < 3 || line[0] != '{') break;
+        if (line[line.length()-1] == ',')
+            line.pop_back();
+        json v = json::parse(line);
+
         const auto type = v["ph"].get<std::string>();
 
         std::string zoneText = "";
@@ -84,7 +97,7 @@ int main( int argc, char** argv )
         if( type == "B" )
         {
             timeline.emplace_back( tracy::Worker::ImportEventTimeline {
-                v["tid"].get<uint64_t>(),
+                v["pid"].get<uint64_t>(),
                 uint64_t( v["ts"].get<double>() * 1000. ),
                 v["name"].get<std::string>(),
                 std::move(zoneText),
@@ -94,7 +107,7 @@ int main( int argc, char** argv )
         else if( type == "E" )
         {
             timeline.emplace_back( tracy::Worker::ImportEventTimeline {
-                v["tid"].get<uint64_t>(),
+                v["pid"].get<uint64_t>(),
                 uint64_t( v["ts"].get<double>() * 1000. ),
                 "",
                 std::move(zoneText),
@@ -103,7 +116,7 @@ int main( int argc, char** argv )
         }
         else if( type == "X" )
         {
-            const auto tid = v["tid"].get<uint64_t>();
+            const auto tid = v["pid"].get<uint64_t>();
             const auto ts0 = uint64_t( v["ts"].get<double>() * 1000. );
             const auto ts1 = ts0 + uint64_t( v["dur"].get<double>() * 1000. );
             const auto name = v["name"].get<std::string>();
@@ -113,7 +126,7 @@ int main( int argc, char** argv )
         else if( type == "i" || type == "I" )
         {
             messages.emplace_back( tracy::Worker::ImportEventMessages {
-                v["tid"].get<uint64_t>(),
+                v["pid"].get<uint64_t>(),
                 uint64_t( v["ts"].get<double>() * 1000. ),
                 v["name"].get<std::string>()
             } );
